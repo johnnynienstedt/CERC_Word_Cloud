@@ -55,7 +55,7 @@ def get_words(file_content, cloud_size, hidden_words=None):
     
     # separate each word and eliminate numbers and words less than 4 letters long
     all_words = []
-    
+    acronyms = set()
     for line in file_content.split('\n'):
     
         # Normalize apostrophes BEFORE contractions.fix()
@@ -69,9 +69,8 @@ def get_words(file_content, cloud_size, hidden_words=None):
         for idx, x in enumerate(temp):
 
             x = re.sub(r'^[\W_]+|[\W_]+$', '', x)
-            
             x = re.sub('[0-9]', '', x)
-        
+            
             # Strip punctuation at the end
             while x.endswith(('.', ',', '!', '?', "'")):
                 x = x[:-1]
@@ -86,6 +85,10 @@ def get_words(file_content, cloud_size, hidden_words=None):
             if x.startswith('\ufeff'):
                 x = x.replace('\ufeff', '')
 
+            # Detect acronyms: all letters uppercase, length <= 5
+            if x.isupper() and len(x) <= 5:
+                acronyms.add(x)
+            
             # Force first word of each line to be lowercase
             if idx == 0 and len(x) > 0:
                 x = x[0].lower() + x[1:]
@@ -200,8 +203,7 @@ def get_words(file_content, cloud_size, hidden_words=None):
         elif word.lower() in proper_nouns:
             # Keep proper noun capitalized
             normalized_words.append(word.title())
-        elif word.isupper() and len(word) <= 5:
-            # Keep all caps acronyms as-is
+        elif word.upper() in acronyms:
             normalized_words.append(word)
         else:
             normalized_words.append(word.lower())
