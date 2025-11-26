@@ -200,6 +200,9 @@ def get_words(file_content, cloud_size, hidden_words=None):
         elif word.lower() in proper_nouns:
             # Keep proper noun capitalized
             normalized_words.append(word.title())
+        elif word.isupper() and len(word) <= 5:
+            # Keep all caps acronyms as-is
+            normalized_words.append(word)
         else:
             normalized_words.append(word.lower())
     
