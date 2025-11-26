@@ -480,15 +480,16 @@ def crop_to_content(img, margin=5):
     return cropped
 
 # Streamlit UI
-st.markdown(
-    """
-    <div style="display:flex; align-items:center;">
-        <img src="Big-C-Red.png" width="38" style="margin-right:10px;">
-        <h1 style="margin:0;">Word Cloud Generator</h1>
-    </div>
-    """,
-    unsafe_allow_html=True
-)
+logo = Image.open("Big-C-Red.png")
+
+# Create two columns for logo + title
+col1, col2 = st.columns([1, 10])
+
+with col1:
+    st.image(logo, width=40)   # Adjust width to taste (32–48 works best)
+
+with col2:
+    st.markdown("<h1 style='margin-bottom: 0;'>Word Cloud Generator</h1>", unsafe_allow_html=True)
 
 # Custom CSS for styling
 st.markdown("""
