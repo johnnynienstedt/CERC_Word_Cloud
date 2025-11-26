@@ -61,13 +61,15 @@ def get_words(file_content, cloud_size, hidden_words=None):
         # Normalize apostrophes BEFORE contractions.fix()
         for a in APOSTROPHES:
             line = line.replace(a, "'")
-    
+        
         fixed_line = contractions.fix(line)
         
         temp = fixed_line.split()
     
         for idx, x in enumerate(temp):
-        
+
+            x = re.sub(r'^[\W_]+|[\W_]+$', '', x)
+            
             x = re.sub('[0-9]', '', x)
         
             # Strip punctuation at the end
