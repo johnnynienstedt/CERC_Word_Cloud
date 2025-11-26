@@ -14,7 +14,15 @@ import io
 import os
 
 # Page config
-st.set_page_config(page_title="Word Cloud Generator", layout="centered")
+st.markdown(
+    """
+    <div style="display:flex; align-items:center;">
+        <img src="Big-C-Red.png" width="38" style="margin-right:10px;">
+        <h1 style="margin:0;">Word Cloud Generator</h1>
+    </div>
+    """,
+    unsafe_allow_html=True
+)
 
 # Download NLTK data
 @st.cache_resource
