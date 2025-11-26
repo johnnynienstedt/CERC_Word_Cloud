@@ -629,7 +629,7 @@ if 'word_cloud' in st.session_state:
             )
 
 # Instructions
-with st.expander("ℹ️ How to use"):
+with st.expander("How to use"):
     st.markdown("""
     1. **Upload a text file** (.txt format) using the file uploader above
     2. **Select the number of words** you want in your cloud (30-100)
