@@ -470,10 +470,35 @@ def crop_to_content(img, margin=5):
 
 # Streamlit UI
 st.title("📊 Word Cloud Generator")
-st.markdown("Upload a text file to generate a beautiful word cloud visualization.")
+
+# Custom CSS for styling
+st.markdown("""
+    <style>
+    /* Hide file size limit text */
+    [data-testid="stFileUploader"] small {
+        display: none !important;
+    }
+    [data-testid="stFileUploader"] [class*="uploadedFileName"] + div {
+        display: none !important;
+    }
+    section[data-testid="stFileUploader"] small {
+        visibility: hidden !important;
+        height: 0 !important;
+        margin: 0 !important;
+    }
+    /* Make dropdown narrower */
+    div[data-baseweb="select"] {
+        max-width: 150px;
+    }
+    </style>
+    """, unsafe_allow_html=True)
 
 # File uploader
-uploaded_file = st.file_uploader("Choose a .txt file", type=['txt'])
+uploaded_file = st.file_uploader("Drag and drop file here", type=['txt'], label_visibility="visible")
+
+# Show filename if uploaded
+if uploaded_file is not None:
+    st.markdown(f"**File:** {uploaded_file.name}")
 
 # Cloud size selector
 cloud_size = st.selectbox(
@@ -487,22 +512,15 @@ if not os.path.exists(FONT_PATH):
     st.error(f"⚠️ Font file '{FONT_PATH}' not found. Please ensure it's in the same directory as this script.")
     st.stop()
 
-# Track parameter changes
-if 'last_params' not in st.session_state:
-    st.session_state.last_params = None
-
-current_params = (cloud_size, uploaded_file.name if uploaded_file else None)
-params_changed = st.session_state.last_params != current_params
-
-# Button text changes based on whether params changed
-if params_changed and st.session_state.last_params is not None:
-    button_text = "🎨 Generate New Cloud"
-else:
-    button_text = "🔄 Generate/Re-shuffle Cloud"
+# Generate and Download buttons side by side
+col1, col2 = st.columns([1, 1])
 
 # Generate button
 if uploaded_file is not None:
-    if st.button(button_text, type="primary"):
+    with col1:
+        generate_clicked = st.button("🎨 Generate Cloud", type="primary", use_container_width=True)
+    
+    if generate_clicked:
         # Read file
         file_content = uploaded_file.read().decode('utf-8', errors='replace')
         
@@ -536,9 +554,9 @@ if uploaded_file is not None:
                         st.session_state.word_cloud = img_cropped
                         st.session_state.placed_count = placed_count
                         st.session_state.total_words = total_words
-                        st.session_state.last_params = current_params
                         
                         st.success(f"✅ Successfully placed {placed_count} out of {total_words} words!")
+                        st.rerun()
                         
                 except Exception as e:
                     st.error(f"❌ Error generating word cloud: {str(e)}")
@@ -547,17 +565,21 @@ if uploaded_file is not None:
 if 'word_cloud' in st.session_state:
     st.image(st.session_state.word_cloud, use_container_width=True)
     
-    # Download button
-    buf = io.BytesIO()
-    st.session_state.word_cloud.save(buf, format='PNG')
-    buf.seek(0)
-    
-    st.download_button(
-        label="⬇️ Download Word Cloud",
-        data=buf,
-        file_name="word_cloud.png",
-        mime="image/png"
-    )
+    # Download button (only show when cloud exists)
+    if uploaded_file is not None:
+        buf = io.BytesIO()
+        st.session_state.word_cloud.save(buf, format='PNG')
+        buf.seek(0)
+        
+        with col2:
+            st.download_button(
+                label="⬇️ Download Cloud",
+                data=buf,
+                file_name="word_cloud.png",
+                mime="image/png",
+                type="primary",
+                use_container_width=True
+            )
 
 # Instructions
 with st.expander("ℹ️ How to use"):
