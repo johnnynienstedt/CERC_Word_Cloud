@@ -587,7 +587,7 @@ if uploaded_file is not None:
     
     if generate_clicked:
         # Read file
-        file_content = uploaded_file.read().decode('utf-8', errors='replace')
+        file_content = uploaded_file.read().decode('cp1252')
         
         # Check if file has enough content
         if len(file_content.strip()) < 100:
