@@ -565,7 +565,7 @@ col1, col2 = st.columns([1, 1])
 # Generate button
 if uploaded_file is not None:
     with col1:
-        generate_clicked = st.button("🎨 Generate Cloud", type="primary", use_container_width=True)
+        generate_clicked = st.button("Generate Cloud", type="primary", use_container_width=True)
     
     if generate_clicked:
         # Read file
@@ -620,7 +620,7 @@ if 'word_cloud' in st.session_state:
         
         with col2:
             st.download_button(
-                label="⬇️ Download Cloud",
+                label="Download Cloud",
                 data=buf,
                 file_name="word_cloud.png",
                 mime="image/png",
