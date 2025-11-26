@@ -1,0 +1,6 @@
+[theme]
+base = "light"
+primaryColor = "#CC0000"     # Big C red
+backgroundColor = "#FFFFFF"
+secondaryBackgroundColor = "#F5F5F5"
+textColor = "#000000"
