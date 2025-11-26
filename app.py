@@ -33,8 +33,11 @@ download_nltk_data()
 # Font path - assumes font file is in same directory as script
 FONT_PATH = 'Gnuolane Rg.otf'
 
-def get_words(file_content, cloud_size):
+def get_words(file_content, cloud_size, hidden_words=None):
     """Extract and process words from file content"""
+    
+    if hidden_words is None:
+        hidden_words = set()
     
     # separate each word and eliminate numbers and words less than 4 letters long
     all_words = []
@@ -232,17 +235,20 @@ def get_words(file_content, cloud_size):
     
     # truncate at correct size
     result = dict(sorted(result.items(), key = lambda x:x[1], reverse = True))
+    
+    # Filter out hidden words (case-insensitive)
+    if hidden_words:
+        result = {word: freq for word, freq in result.items() 
+                  if word.lower() not in hidden_words}
+    
     result = dict(itertools.islice(result.items(), cloud_size))
         
     return result
 
 def generate_word_cloud(word_counts, width=1200, height=800, font_path=None, 
-                        min_font_size=15, max_font_size=150, margin=4, packing_weight=0.67):
+                        min_font_size=15, max_font_size=150, margin=4):
     """
     Generate a word cloud with frequency-based sizing and pixel-perfect placement.
-    
-    Args:
-        packing_weight: Weight for packing vs alphabetical (0=all alphabetical, 1=all packing, 0.67=default 2:1 ratio)
     """
     
     def string_to_lex_value(s):
@@ -409,15 +415,7 @@ def generate_word_cloud(word_counts, width=1200, height=800, font_path=None,
                 if not check_collision(mask_x, mask_y, dilated_mask):
                     alpha_distance = np.sqrt((text_x - center_x)**2 + (text_y - center_y)**2)
                     packing_distance = np.sqrt((text_x - width/2)**2 + (text_y - height/2)**2)
-                    
-                    # Calculate weighted distance based on packing_weight
-                    # packing_weight=0 means all alphabetical (1:0 ratio)
-                    # packing_weight=1 means all packing (0:1 ratio)
-                    # packing_weight=0.67 means 2:1 ratio (default)
-                    alpha_weight = 1 - packing_weight
-                    total_distance = alpha_weight * alpha_distance + packing_weight * packing_distance
-                    
-                    valid[(text_x, text_y, mask_x, mask_y)] = (total_distance, dilated_mask)
+                    valid[(text_x, text_y, mask_x, mask_y)] = (alpha_distance + 2*packing_distance, dilated_mask)
                 
                 y_offset = (-1)**attempt_y * (attempt_y+random.random()*height/200)
                 x_offset = random.random() * width/10
@@ -500,7 +498,7 @@ st.markdown("""
 # File uploader
 uploaded_file = st.file_uploader("Drag and drop file here", type=['txt'], label_visibility="visible")
 
-# Cloud size selector and packing slider side by side
+# Cloud size selector and word exclusion input side by side
 col1, col2 = st.columns([1, 3])
 
 with col1:
@@ -511,31 +509,31 @@ with col1:
     )
 
 with col2:
-    packing_weight = st.slider(
-        "Layout Priority",
-        min_value=0.0,
-        max_value=1.0,
-        value=0.67,  # Default: 2:1 ratio means packing is 2/(1+2) = 0.67
-        step=0.01,
-        format="",
-        help="Adjust the balance between alphabetical ordering and compact packing"
-    )
-    # Display labels under slider
-    st.markdown("""
-        <style>
-        .slider-labels {
-            display: flex;
-            justify-content: space-between;
-            font-size: 0.8rem;
-            color: #666;
-            margin-top: -10px;
-        }
-        </style>
-        <div class="slider-labels">
-            <span>Alphabetical Order</span>
-            <span>Packing Efficiency</span>
-        </div>
-    """, unsafe_allow_html=True)
+    # Initialize hidden words in session state
+    if 'hidden_words' not in st.session_state:
+        st.session_state.hidden_words = set()
+    
+    col2a, col2b = st.columns([3, 1])
+    with col2a:
+        word_to_hide = st.text_input(
+            "Exclude word or phrase",
+            key="word_to_hide",
+            placeholder="Enter word to hide..."
+        )
+    with col2b:
+        st.markdown("<div style='margin-top: 1.85rem;'></div>", unsafe_allow_html=True)
+        if st.button("Hide", use_container_width=True):
+            if word_to_hide and word_to_hide.strip():
+                st.session_state.hidden_words.add(word_to_hide.strip().lower())
+                st.rerun()
+    
+    # Display hidden words if any exist
+    if st.session_state.hidden_words:
+        hidden_list = ", ".join(sorted(st.session_state.hidden_words))
+        st.caption(f"Hidden: {hidden_list}")
+        if st.button("Clear all hidden words", key="clear_hidden"):
+            st.session_state.hidden_words = set()
+            st.rerun()
 
 # Check if font exists
 if not os.path.exists(FONT_PATH):
@@ -560,8 +558,8 @@ if uploaded_file is not None:
         else:
             with st.spinner('Generating word cloud...'):
                 try:
-                    # Process words
-                    word_counts = get_words(file_content, cloud_size)
+                    # Process words with hidden words filter
+                    word_counts = get_words(file_content, cloud_size, st.session_state.hidden_words)
                     
                     if len(word_counts) == 0:
                         st.error("❌ No valid words found in the file. Please check your text file.")
@@ -574,8 +572,7 @@ if uploaded_file is not None:
                             font_path=FONT_PATH,
                             min_font_size=15,
                             max_font_size=150,
-                            margin=3,
-                            packing_weight=packing_weight
+                            margin=3
                         )
                         
                         # Crop to content
