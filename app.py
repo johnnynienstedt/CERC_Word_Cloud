@@ -176,8 +176,8 @@ def get_words(file_content, cloud_size, hidden_words=None):
     # STEP 2: Identify proper nouns (words that appear capitalized more than 70% of the time)
     word_case_counts = {}
     for i, word in enumerate(all_words):
-        # Skip bigrams
-        if ' ' in word:
+        # Skip bigrams and acronyms
+        if ' ' in word or word.upper in acronyms:
             continue
         lower_word = word.lower()
         if lower_word not in word_case_counts:
