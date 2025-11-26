@@ -56,7 +56,13 @@ def get_words(file_content, cloud_size, hidden_words=None):
     all_words = []
     
     for line in file_content.split('\n'):
+    
+        # Normalize apostrophes BEFORE contractions.fix()
+        for a in APOSTROPHES:
+            line = line.replace(a, "'")
+    
         fixed_line = contractions.fix(line)
+        
         if '+' in fixed_line:
             temp = fixed_line.split()
         else:
@@ -64,9 +70,6 @@ def get_words(file_content, cloud_size, hidden_words=None):
             temp = temp.split()
     
         for idx, x in enumerate(temp):
-            # Normalize apostrophes
-            for a in APOSTROPHES:
-                x = x.replace(a, "'")
         
             x = re.sub('[0-9]', '', x)
         
