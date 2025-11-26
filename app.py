@@ -486,7 +486,7 @@ logo = Image.open("Big-C-Red.png")
 col1, col2 = st.columns([1, 10])
 
 with col1:
-    st.image(logo, width=40)   # Adjust width to taste (32–48 works best)
+    st.image(logo, width=80)   # Adjust width to taste (32–48 works best)
 
 with col2:
     st.markdown("<h1 style='margin-bottom: 0;'>Word Cloud Generator</h1>", unsafe_allow_html=True)
