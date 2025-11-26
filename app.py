@@ -48,6 +48,7 @@ def get_words(file_content, cloud_size, hidden_words=None):
         '\u2019',  # ’
         '\u2018',  # ‘
         '\u02BC',  # ʼ
+        '\u02BB',
         '\u2032',  # ′ prime
         '\uFF07',  # ＇ fullwidth apostrophe
     ]
