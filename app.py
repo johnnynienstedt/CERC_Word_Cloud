@@ -528,6 +528,9 @@ with col2:
             if word_to_hide and word_to_hide.strip():
                 st.session_state.hidden_words.add(word_to_hide.strip().lower())
                 st.rerun()
+                
+            # CLEAR THE INPUT FIELD
+            st.session_state.hide_word_input = ""
     
     # Display hidden words if any exist
     if st.session_state.hidden_words:
