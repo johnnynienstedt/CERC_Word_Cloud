@@ -64,11 +64,7 @@ def get_words(file_content, cloud_size, hidden_words=None):
     
         fixed_line = contractions.fix(line)
         
-        if '+' in fixed_line:
-            temp = fixed_line.split()
-        else:
-            temp = fixed_line.translate(str.maketrans('', '', string.punctuation))
-            temp = temp.split()
+        temp = fixed_line.split()
     
         for idx, x in enumerate(temp):
         
