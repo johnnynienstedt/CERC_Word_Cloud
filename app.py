@@ -474,34 +474,49 @@ st.title("📊 Word Cloud Generator")
 # Custom CSS for styling
 st.markdown("""
     <style>
-    /* Make file uploader area larger */
+    /* Make file uploader area larger and hide size limit */
     [data-testid="stFileUploader"] {
-        padding: 2rem 0;
+        padding: 1.5rem 0;
     }
-    [data-testid="stFileUploader"] > div > div {
-        padding: 3rem 1rem;
+    [data-testid="stFileUploader"] section {
+        padding: 2.5rem 1rem !important;
+    }
+    [data-testid="stFileUploader"] section > div {
+        padding: 2rem 1rem !important;
     }
     /* Larger drag and drop text */
-    [data-testid="stFileUploader"] label {
-        font-size: 1.2rem !important;
+    [data-testid="stFileUploader"] section button {
+        font-size: 1.3rem !important;
     }
     /* Hide file size limit text */
     [data-testid="stFileUploader"] small {
-        display: none;
+        display: none !important;
     }
     /* Make dropdown narrower */
-    [data-testid="stSelectbox"] {
+    div[data-baseweb="select"] {
         max-width: 150px;
+    }
+    /* When file is uploaded, make uploader compact */
+    [data-testid="stFileUploader"].uploaded {
+        padding: 0.5rem 0;
+    }
+    [data-testid="stFileUploader"].uploaded section {
+        padding: 0.5rem 1rem !important;
     }
     </style>
     """, unsafe_allow_html=True)
 
 # File uploader
-uploaded_file = st.file_uploader("Choose a .txt file", type=['txt'], label_visibility="collapsed")
+if 'uploaded_file_name' not in st.session_state:
+    st.session_state.uploaded_file_name = None
 
-# Show filename if uploaded
+uploaded_file = st.file_uploader("Drag and drop file here", type=['txt'], label_visibility="visible")
+
+# Show filename compactly if uploaded
 if uploaded_file is not None:
-    st.write(f"📄 **{uploaded_file.name}**")
+    if st.session_state.uploaded_file_name != uploaded_file.name:
+        st.session_state.uploaded_file_name = uploaded_file.name
+    st.markdown(f"**File:** {uploaded_file.name}")
 
 # Cloud size selector
 cloud_size = st.selectbox(
