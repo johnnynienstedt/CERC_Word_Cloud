@@ -474,17 +474,10 @@ st.title("📊 Word Cloud Generator")
 # Custom CSS for styling
 st.markdown("""
     <style>
-    /* Hide file size limit text */
-    [data-testid="stFileUploader"] small {
-        display: none !important;
-    }
-    [data-testid="stFileUploader"] [class*="uploadedFileName"] + div {
-        display: none !important;
-    }
-    section[data-testid="stFileUploader"] small {
-        visibility: hidden !important;
-        height: 0 !important;
-        margin: 0 !important;
+    /* Make file uploader area taller */
+    [data-testid="stFileUploader"] > section > button {
+        padding: 3rem 2rem !important;
+        min-height: 150px;
     }
     /* Make dropdown narrower */
     div[data-baseweb="select"] {
@@ -495,10 +488,6 @@ st.markdown("""
 
 # File uploader
 uploaded_file = st.file_uploader("Drag and drop file here", type=['txt'], label_visibility="visible")
-
-# Show filename if uploaded
-if uploaded_file is not None:
-    st.markdown(f"**File:** {uploaded_file.name}")
 
 # Cloud size selector
 cloud_size = st.selectbox(
