@@ -214,8 +214,8 @@ def get_words(file_content, cloud_size, hidden_words=None):
     # Group words by their lemma
     lemma_groups = {}
     for word in words:
-        if ' ' in word or word.lower() in proper_nouns:
-            # Don't lemmatize bigrams or proper nouns
+        if ' ' in word:
+            # Don't lemmatize bigrams
             lemma = word
         else:
             lemma = lemmatizer.lemmatize(word)
