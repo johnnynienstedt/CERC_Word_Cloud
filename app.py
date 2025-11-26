@@ -12,6 +12,11 @@ from collections import Counter
 from scipy.ndimage import binary_dilation
 import io
 import os
+import base64
+
+def load_image_as_base64(path):
+    with open(path, "rb") as f:
+        return base64.b64encode(f.read()).decode()
 
 # Page config
 st.set_page_config(page_title="Word Cloud Generator", layout="centered")
@@ -480,16 +485,18 @@ def crop_to_content(img, margin=5):
     return cropped
 
 # Streamlit UI
-logo = Image.open("Big-C-Red.png")
+logo_base64 = load_image_as_base64("Big-C-Red.png")
 
-# Create two columns for logo + title
-col1, col2 = st.columns([1, 10])
-
-with col1:
-    st.image(logo, width=80)   # Adjust width to taste (32–48 works best)
-
-with col2:
-    st.markdown("<h1 style='margin-bottom: 0;'>Word Cloud Generator</h1>", unsafe_allow_html=True)
+st.markdown(
+    f"""
+    <h1 style="display: flex; align-items: center; gap: 10px; margin: 0;">
+        <img src="data:image/png;base64,{logo_base64}" 
+             style="height: 80px; vertical-align: middle;">
+        Word Cloud Generator
+    </h1>
+    """,
+    unsafe_allow_html=True
+)
 
 # Custom CSS for styling
 st.markdown("""
