@@ -233,14 +233,16 @@ def get_words(file_content, cloud_size, hidden_words=None):
         total_freq = sum(f for _, f in group)
         result[most_frequent_word] = total_freq
     
-    # truncate at correct size
+    # Sort by frequency
     result = dict(sorted(result.items(), key = lambda x:x[1], reverse = True))
     
-    # Filter out hidden words (case-insensitive)
+    # Filter out hidden words (case-insensitive) and then truncate to correct size
+    # This ensures we always get cloud_size words (if available) after filtering
     if hidden_words:
         result = {word: freq for word, freq in result.items() 
                   if word.lower() not in hidden_words}
     
+    # Truncate to cloud_size AFTER filtering
     result = dict(itertools.islice(result.items(), cloud_size))
         
     return result
