@@ -43,6 +43,14 @@ def get_words(file_content, cloud_size, hidden_words=None):
     
     if hidden_words is None:
         hidden_words = set()
+
+    APOSTROPHES = [
+        '\u2019',  # ’
+        '\u2018',  # ‘
+        '\u02BC',  # ʼ
+        '\u2032',  # ′ prime
+        '\uFF07',  # ＇ fullwidth apostrophe
+    ]
     
     # separate each word and eliminate numbers and words less than 4 letters long
     all_words = []
@@ -56,16 +64,26 @@ def get_words(file_content, cloud_size, hidden_words=None):
             temp = temp.split()
     
         for idx, x in enumerate(temp):
-            x = re.sub('[0-9]', '', x)
-            while x.endswith('.') or x.endswith(',') or x.endswith('!') or x.endswith('?') or x.endswith("'") or x.endswith("'") or x.endswith("'"):
-                x = x[:-1]
-            if x.endswith("'s") or x.endswith("'s"):
-                x = x[:-2]
-            if '+' in x:
-                x = re.sub(r'\+',' ',x)
-            if x.startswith('\ufeff'):
-                x = re.sub('\ufeff','',x)
+            # Normalize apostrophes
+            for a in APOSTROPHES:
+                x = x.replace(a, "'")
         
+            x = re.sub('[0-9]', '', x)
+        
+            # Strip punctuation at the end
+            while x.endswith(('.', ',', '!', '?', "'")):
+                x = x[:-1]
+        
+            # Handle possessive endings
+            if x.endswith("'s"):
+                x = x[:-2]
+        
+            if '+' in x:
+                x = x.replace('+', ' ')
+        
+            if x.startswith('\ufeff'):
+                x = x.replace('\ufeff', '')
+
             # Force first word of each line to be lowercase
             if idx == 0 and len(x) > 0:
                 x = x[0].lower() + x[1:]
@@ -74,7 +92,7 @@ def get_words(file_content, cloud_size, hidden_words=None):
                 all_words.append(x)
     
     # eliminate spaces and punctuation
-    for item in ['', ',', '-', '–', "'", ''', ''', '"', '"', '"']:
+    for item in ['', ',', '-', '–', "'", ''', ''', '"', '"', '"',]:
         if item in all_words:
             all_words.remove(item)
 
