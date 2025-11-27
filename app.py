@@ -548,7 +548,7 @@ col1, col2, col3 = st.columns([1, 2, 2])
 
 with col1:
     cloud_size = st.selectbox(
-        "Number of words in cloud",
+        "Words in cloud",
         options=[30, 40, 50, 60, 70, 80, 90, 100],
         index=1  # Default to 40
     )
