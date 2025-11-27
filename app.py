@@ -660,6 +660,9 @@ if uploaded_file is not None:
                                 break
                             
                             attempts += 1
+
+                            if attempts == 5:
+                                st.error("❌ Generation attempt timed out. Try again.")
                         
                         # Crop to content
                         img_cropped = crop_to_content(img, margin=5)
