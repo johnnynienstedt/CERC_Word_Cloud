@@ -601,12 +601,8 @@ if not os.path.exists(FONT_PATH):
     st.error(f"⚠️ Font file '{FONT_PATH}' not found. Please ensure it's in the same directory as this script.")
     st.stop()
 
-# Initialize scale factor
-if "scale_factor" not in st.session_state:
-    st.session_state.scale_factor = 1
-
 # Generation and download buttons
-col1, col2 = st.columns([62, 38])
+col1, col2 = st.columns([6, 4])
 
 # Generate button
 if uploaded_file is not None:
@@ -616,9 +612,6 @@ if uploaded_file is not None:
     if generate_clicked:
         # Read file
         file_content = uploaded_file.read().decode('cp1252')
-
-        # reset scale
-        st.session_state.scale_factor = 1
         
         # Check if file has enough content
         if len(file_content.strip()) < 100:
@@ -633,7 +626,6 @@ if uploaded_file is not None:
                         st.error("❌ No valid words found in the file. Please check your text file.")
                     else:
                         # Generate cloud
-                        scale = st.session_state.scale_factor
                         compression = st.session_state.compression
                         MIN_FONT_SIZE = 30
                         MAX_FONT_SIZE = 300
