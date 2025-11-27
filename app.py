@@ -707,15 +707,15 @@ if 'word_cloud' in st.session_state:
                                 # Generate cloud
                                 scale = st.session_state.scale_factor
                                 compression = st.session_state.compression
-                                MIN_FONT_SIZE = 15 / compression
-                                MAX_FONT_SIZE = 150 / compression
+                                MIN_FONT_SIZE = 30
+                                MAX_FONT_SIZE = 300
                                 POWER = 1.2
                                 attempts = 1
                                 while True:
                                     img, placed_count, total_words = generate_word_cloud(
                                         word_counts,
-                                        width=int(1200*compression * scale),
-                                        height=int(800 * scale),
+                                        width=int(2400 * compression * scale),
+                                        height=int(1600 * (1 + (compression-1)/3) * scale),
                                         font_path=FONT_PATH,
                                         min_font_size=MIN_FONT_SIZE*scale,
                                         max_font_size=MAX_FONT_SIZE*scale,
