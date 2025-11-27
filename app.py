@@ -656,7 +656,7 @@ if uploaded_file is not None:
                             
                             MIN_FONT_SIZE *= 0.9
                             MAX_FONT_SIZE *= 0.7
-                            POWER *= 0.9
+                            POWER *= 1.1
                             attempts += 1
                         
                         # Crop to content
