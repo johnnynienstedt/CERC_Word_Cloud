@@ -728,7 +728,6 @@ if 'word_cloud' in st.session_state:
                                     
                                     MIN_FONT_SIZE *= 0.9
                                     MAX_FONT_SIZE *= 0.7
-                                    POWER *= 0.9
                                     attempts += 1
                                 
                                 # Crop to content
