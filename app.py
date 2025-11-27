@@ -191,7 +191,7 @@ def get_words(file_content, cloud_size, hidden_words=None):
     for word, counts in word_case_counts.items():
         if counts['total'] >= 3 and counts['all_caps'] == counts['total']:
             acronyms.add(word)
-        elif counts['total'] >= 3 and counts['caps'] / counts['total'] > 0.7:
+        elif counts['total'] >= 3 and counts['caps'] / counts['total'] > 0.9:
             proper_nouns.add(word)
 
             
