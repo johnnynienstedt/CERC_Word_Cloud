@@ -561,7 +561,7 @@ with col2:
     col2a, col2b = st.columns([3, 1])
     with col2a:
         word_to_hide = st.text_input(
-            "Exclude word or phrase",
+            "Exclude words or phrases?",
             key="word_to_hide",
             placeholder="Enter word to hide..."
         )
@@ -606,12 +606,12 @@ if "scale_factor" not in st.session_state:
     st.session_state.scale_factor = 1
 
 # Generation and download buttons
-col1, col2, col3 = st.columns([2, 2, 1])
+col1, col2, col3 = st.columns([1, 1, 1])
 
 # Generate button
 if uploaded_file is not None:
     with col1:
-        generate_clicked = st.button("Generate Initial Cloud", type="primary", use_container_width=True)
+        generate_clicked = st.button("Generate Quick Cloud", type="primary", use_container_width=True)
     
     if generate_clicked:
         # Read file
