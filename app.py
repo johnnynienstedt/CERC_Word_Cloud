@@ -544,7 +544,7 @@ st.markdown("""
 uploaded_file = st.file_uploader("Drag and drop file here", type=['txt'], label_visibility="visible")
 
 # Cloud size selector and word exclusion input side by side
-col1, col2 = st.columns([1, 3])
+col1, col2, col3 = st.columns([1, 2, 2])
 
 with col1:
     cloud_size = st.selectbox(
@@ -602,7 +602,7 @@ if not os.path.exists(FONT_PATH):
     st.stop()
 
 # Generate and Download buttons side by side
-col1, col2, col3 = st.columns([1, 1, 1])
+col1, col2 = st.columns([1, 1])
 
 # Generate button
 if uploaded_file is not None:
