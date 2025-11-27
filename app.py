@@ -12,6 +12,7 @@ from PIL import Image, ImageDraw, ImageFont
 from nltk.stem import WordNetLemmatizer, PorterStemmer
 from collections import Counter
 from scipy.ndimage import binary_dilation
+from charset_normalizer import from_bytes
 
 def load_image_as_base64(path):
     with open(path, "rb") as f:
