@@ -55,7 +55,6 @@ def get_words(file_content, cloud_size, hidden_words=None):
     
     # separate each word and eliminate numbers and words less than 4 letters long
     all_words = []
-    acronyms = set()
     for line in file_content.split('\n'):
     
         # Normalize apostrophes BEFORE contractions.fix()
@@ -84,14 +83,10 @@ def get_words(file_content, cloud_size, hidden_words=None):
         
             if x.startswith('\ufeff'):
                 x = x.replace('\ufeff', '')
-
-            # Detect acronyms: all letters uppercase, length <= 5
-            if x.isupper() and len(x) <= 5:
-                acronyms.add(x)
             
-            # Force first word of each line to be lowercase
-            if idx == 0 and len(x) > 0:
-                x = x[0].lower() + x[1:]
+            # # Force first word of each line to be lowercase
+            # if idx == 0 and len(x) > 0:
+            #     x = x[0].lower() + x[1:]
                 
             if len(x) > 1:
                 all_words.append(x)
@@ -176,26 +171,31 @@ def get_words(file_content, cloud_size, hidden_words=None):
     # STEP 2: Identify proper nouns (words that appear capitalized more than 70% of the time)
     word_case_counts = {}
     for i, word in enumerate(all_words):
-        # Skip bigrams and acronyms
-        if ' ' in word or word.upper in acronyms:
-            continue
+        # Skip bigrams and stress-test acronyms
+        if ' ' in word:
+            continue            
         lower_word = word.lower()
         if lower_word not in word_case_counts:
-            word_case_counts[lower_word] = {'caps': 0, 'total': 0}
+            word_case_counts[lower_word] = {'caps': 0, 'all_caps': 0, 'total': 0}
 
         # Check if word is capitalized
         if word and word[0].isupper():
             word_case_counts[lower_word]['caps'] += 1
+        if word and word.isupper():
+            word_case_counts[lower_word]['all_caps'] += 1
         word_case_counts[lower_word]['total'] += 1
     
     # Determine which words are proper nouns
     proper_nouns = set()
+    acronyms = set()
     for word, counts in word_case_counts.items():
-        if counts['total'] >= 3 and counts['caps'] / counts['total'] > 0.7:
+        if counts['total'] >= 3 and counts['all_caps'] == counts['total']:
+            acronyms.add(word)
+        elif counts['total'] >= 3 and counts['caps'] / counts['total'] > 0.7:
             proper_nouns.add(word)
-    
+
             
-    # STEP 3: Standardize capitalization (but preserve proper nouns)
+    # STEP 3: Standardize capitalization (but preserve proper nouns and acronyms)
     normalized_words = []
     for word in all_words:
         if ' ' in word:  # Bigram
@@ -203,8 +203,8 @@ def get_words(file_content, cloud_size, hidden_words=None):
         elif word.lower() in proper_nouns:
             # Keep proper noun capitalized
             normalized_words.append(word.title())
-        elif word.upper() in acronyms:
-            normalized_words.append(word)
+        elif word.lower() in acronyms:
+            normalized_words.append(word.upper())
         else:
             normalized_words.append(word.lower())
     
@@ -274,11 +274,11 @@ def get_words(file_content, cloud_size, hidden_words=None):
     
     # Truncate to cloud_size AFTER filtering
     result = dict(itertools.islice(result.items(), cloud_size))
-        
+    
     return result
-
+    
 def generate_word_cloud(word_counts, width=1200, height=800, font_path=None, 
-                        min_font_size=15, max_font_size=150, margin=4):
+                        min_font_size=15, max_font_size=150, power=1.2, margin=4):
     """
     Generate a word cloud with frequency-based sizing and pixel-perfect placement.
     """
@@ -307,8 +307,10 @@ def generate_word_cloud(word_counts, width=1200, height=800, font_path=None,
     words_data = []
     max_count = max(word_counts.values())
     min_count = min(word_counts.values())
+    total_count = 0
     
     for word, count in word_counts.items():
+        total_count += count
         # Normalize count (0-1)
         norm_count = (count - min_count) / (max_count - min_count) if max_count > min_count else 1
         
@@ -316,7 +318,7 @@ def generate_word_cloud(word_counts, width=1200, height=800, font_path=None,
         alpha_score = string_to_lex_value(word)
                 
         # Font size calculation
-        font_size = int(min_font_size + (max_font_size - min_font_size) * (norm_count ** 1.2))
+        font_size = int(min_font_size + (max_font_size - min_font_size) * (norm_count ** power))
         
         words_data.append({
             'word': word,
@@ -340,7 +342,7 @@ def generate_word_cloud(word_counts, width=1200, height=800, font_path=None,
         bbox = ImageDraw.Draw(Image.new('L', (1, 1), 0)).textbbox((0, 0), word, font=font)
         word_width = bbox[2] - bbox[0]
         word_height = bbox[3] - bbox[1]
-    
+                
         if word_width <= 0 or word_height <= 0:
             return None, None, 0, 0, (0, 0)
     
@@ -418,7 +420,7 @@ def generate_word_cloud(word_counts, width=1200, height=800, font_path=None,
         
         original_mask, dilated_mask, dilated_w, dilated_h, text_offset = result
         
-        # Start using alpha order
+        # Start using alpha order (account for size distribution)
         buffer = 0.2 * width
         center_x = (width - buffer) * alpha + buffer*2/3
         center_y = height // 2
@@ -578,7 +580,11 @@ with col2:
         if st.button("Clear all hidden words", key="clear_hidden"):
             st.session_state.hidden_words = set()
             st.rerun()
-
+            
+# Initialize compression value on first load
+if "compression" not in st.session_state:
+    st.session_state.compression = 1.0
+        
 # Check if font exists
 if not os.path.exists(FONT_PATH):
     st.error(f"⚠️ Font file '{FONT_PATH}' not found. Please ensure it's in the same directory as this script.")
@@ -586,6 +592,16 @@ if not os.path.exists(FONT_PATH):
 
 # Generate and Download buttons side by side
 col1, col2 = st.columns([1, 1])
+
+# Compression slider (only show once a cloud has been generated)
+if "word_cloud" in st.session_state:
+    st.session_state.compression = st.slider(
+        "Word Cloud Compression (Compress ←→ Stretch)",
+        min_value=0.5,
+        max_value=1.5,
+        value=st.session_state.compression,
+        step=0.05
+    )
 
 # Generate button
 if uploaded_file is not None:
@@ -609,15 +625,30 @@ if uploaded_file is not None:
                         st.error("❌ No valid words found in the file. Please check your text file.")
                     else:
                         # Generate cloud
-                        img, placed_count, total_words = generate_word_cloud(
-                            word_counts,
-                            width=1200,
-                            height=800,
-                            font_path=FONT_PATH,
-                            min_font_size=15,
-                            max_font_size=150,
-                            margin=3
-                        )
+                        compression = st.session_state.compression
+                        MIN_FONT_SIZE = 15 / compression
+                        MAX_FONT_SIZE = 150 / compression
+                        POWER = 1.2
+                        attempts = 1
+                        while True:
+                            img, placed_count, total_words = generate_word_cloud(
+                                word_counts,
+                                width=int(1200*compression),
+                                height=800,
+                                font_path=FONT_PATH,
+                                min_font_size=MIN_FONT_SIZE,
+                                max_font_size=MAX_FONT_SIZE,
+                                power=POWER,
+                                margin=3
+                            )
+                            
+                            if placed_count == total_words:
+                                break
+                            
+                            MIN_FONT_SIZE *= 0.9
+                            MAX_FONT_SIZE *= 0.7
+                            POWER *= 0.9
+                            attempts += 1
                         
                         # Crop to content
                         img_cropped = crop_to_content(img, margin=5)
@@ -627,7 +658,7 @@ if uploaded_file is not None:
                         st.session_state.placed_count = placed_count
                         st.session_state.total_words = total_words
                         
-                        st.success(f"✅ Successfully placed {placed_count} out of {total_words} words!")
+                        st.success(f"Placed {placed_count} out of {total_words} words")
                         st.rerun()
                         
                 except Exception as e:
@@ -664,7 +695,7 @@ with st.expander("How to use"):
     
     **Note:** The word cloud uses intelligent text processing including:
     - Bigram detection for common phrases
-    - Proper noun identification and capitalization
+    - Proper noun and acronym identification and capitalization
     - Lemmatization and stemming for word grouping
     - Common word filtering
     """)
