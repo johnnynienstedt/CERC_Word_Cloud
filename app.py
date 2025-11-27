@@ -1,18 +1,17 @@
-import streamlit as st
 import re
+import io
+import os
 import nltk
-import string
+import base64
 import random
 import itertools
 import contractions
 import numpy as np
+import streamlit as st
 from PIL import Image, ImageDraw, ImageFont
 from nltk.stem import WordNetLemmatizer, PorterStemmer
 from collections import Counter
 from scipy.ndimage import binary_dilation
-import io
-import os
-import base64
 
 def load_image_as_base64(path):
     with open(path, "rb") as f:
@@ -511,6 +510,10 @@ def crop_to_content(img, margin=5):
     cropped = img.crop((x_min, y_min, x_max, y_max))
     return cropped
 
+def detect_encoding(file_bytes):
+    result = from_bytes(file_bytes).best()
+    return result.encoding if result else None
+
 # Streamlit UI
 logo_base64 = load_image_as_base64("Big-C-Red.png")
 
@@ -611,8 +614,16 @@ if uploaded_file is not None:
     
     if generate_clicked:
         # Read file
-        file_content = uploaded_file.read().decode('cp1252')
+        file_bytes = uploaded_file.read()
+        detected_encoding = detect_encoding(file_bytes)
         
+        if detected_encoding:
+            st.caption(f"Detected encoding: {detected_encoding}")
+            file_content = file_bytes.decode(detected_encoding, errors="replace")
+        else:
+            st.warning("Could not detect encoding; falling back to cp1252.")
+            file_content = file_bytes.decode('cp1252')
+
         # Check if file has enough content
         if len(file_content.strip()) < 100:
             st.warning("⚠️ The uploaded file appears to be too short. Please upload a longer text file.")
