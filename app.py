@@ -607,7 +607,7 @@ col1, col2 = st.columns([61, 39])
 # Generate button
 if uploaded_file is not None:
     with col1:
-        generate_clicked = st.button("Generate Quick Cloud", type="primary", use_container_width=True)
+        generate_clicked = st.button("Generate Cloud", type="primary", use_container_width=True)
     
     if generate_clicked:
         # Read file
