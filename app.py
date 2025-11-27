@@ -602,7 +602,7 @@ if not os.path.exists(FONT_PATH):
     st.stop()
 
 # Generate and Download buttons side by side
-col1, col2 = st.columns([1, 1])
+col1, col2 = st.columns([6, 4])
 
 # Generate button
 if uploaded_file is not None:
