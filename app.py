@@ -581,27 +581,28 @@ with col2:
             st.session_state.hidden_words = set()
             st.rerun()
             
-# Initialize compression value on first load
-if "compression" not in st.session_state:
-    st.session_state.compression = 1.0
-        
+with col3:
+    # Initialize compression value on first load
+    if "compression" not in st.session_state:
+        st.session_state.compression = 1.0
+
+    # Compression slider (only show once a cloud has been generated)
+    if "word_cloud" in st.session_state:
+        st.session_state.compression = st.slider(
+            "Compress or Stretch? (Compress ←→ Stretch)",
+            min_value=0.5,
+            max_value=1.5,
+            value=st.session_state.compression,
+            step=0.05
+        )
+
 # Check if font exists
 if not os.path.exists(FONT_PATH):
     st.error(f"⚠️ Font file '{FONT_PATH}' not found. Please ensure it's in the same directory as this script.")
     st.stop()
 
 # Generate and Download buttons side by side
-col1, col2 = st.columns([1, 1])
-
-# Compression slider (only show once a cloud has been generated)
-if "word_cloud" in st.session_state:
-    st.session_state.compression = st.slider(
-        "Word Cloud Compression (Compress ←→ Stretch)",
-        min_value=0.5,
-        max_value=1.5,
-        value=st.session_state.compression,
-        step=0.05
-    )
+col1, col2, col3 = st.columns([1, 1, 1])
 
 # Generate button
 if uploaded_file is not None:
