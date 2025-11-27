@@ -278,7 +278,7 @@ def get_words(file_content, cloud_size, hidden_words=None):
     return result
     
 def generate_word_cloud(word_counts, width=1200, height=800, font_path=None, 
-                        min_font_size=15, max_font_size=150, power=1.2, margin=4):
+                        min_font_size=15, max_font_size=150, power=1.2, compression=1, margin=4):
     """
     Generate a word cloud with frequency-based sizing and pixel-perfect placement.
     """
@@ -421,7 +421,7 @@ def generate_word_cloud(word_counts, width=1200, height=800, font_path=None,
         original_mask, dilated_mask, dilated_w, dilated_h, text_offset = result
         
         # Start using alpha order (account for size distribution)
-        buffer = 0.2 * width
+        buffer = 0.2 * (7 - 6*compression) * width
         center_x = (width - buffer) * alpha + buffer*2/3
         center_y = height // 2
         
@@ -606,7 +606,7 @@ if "scale_factor" not in st.session_state:
     st.session_state.scale_factor = 1
 
 # Generation and download buttons
-col1, col2, col3 = st.columns([1, 1, 1])
+col1, col2 = st.columns([62, 38])
 
 # Generate button
 if uploaded_file is not None:
@@ -635,28 +635,25 @@ if uploaded_file is not None:
                         # Generate cloud
                         scale = st.session_state.scale_factor
                         compression = st.session_state.compression
-                        MIN_FONT_SIZE = 15 / compression
-                        MAX_FONT_SIZE = 150 / compression
+                        MIN_FONT_SIZE = 30
+                        MAX_FONT_SIZE = 300
                         POWER = 1.2
                         attempts = 1
                         while True:
                             img, placed_count, total_words = generate_word_cloud(
                                 word_counts,
-                                width=int(1200*compression * scale),
-                                height=int(800 * scale),
+                                width=int(2400 * attempts),
+                                height=int(1600 * attempts),
                                 font_path=FONT_PATH,
-                                min_font_size=MIN_FONT_SIZE*scale,
-                                max_font_size=MAX_FONT_SIZE*scale,
+                                min_font_size=MIN_FONT_SIZE,
+                                max_font_size=MAX_FONT_SIZE,
                                 power=POWER,
-                                margin=3*scale
+                                margin=6
                             )
                             
                             if placed_count == total_words:
                                 break
                             
-                            MIN_FONT_SIZE *= 0.9
-                            MAX_FONT_SIZE *= 0.7
-                            POWER *= 1.1
                             attempts += 1
                         
                         # Crop to content
@@ -682,69 +679,8 @@ if 'word_cloud' in st.session_state:
         buf = io.BytesIO()
         st.session_state.word_cloud.save(buf, format='PNG')
         buf.seek(0)
-
+        
         with col2:
-            resolution_clicked = st.button("Generate HD Cloud", type="primary", use_container_width=True)
-            
-            if resolution_clicked:
-                # Read file
-                file_content = uploaded_file.read().decode('cp1252')
-        
-                st.session_state.scale_factor = 2
-                
-                # Check if file has enough content
-                if len(file_content.strip()) < 100:
-                    st.warning("⚠️ The uploaded file appears to be too short. Please upload a longer text file.")
-                else:
-                    with st.spinner('Generating word cloud...'):
-                        try:
-                            # Process words with hidden words filter
-                            word_counts = get_words(file_content, cloud_size, st.session_state.hidden_words)
-                            
-                            if len(word_counts) == 0:
-                                st.error("❌ No valid words found in the file. Please check your text file.")
-                            else:
-                                # Generate cloud
-                                scale = st.session_state.scale_factor
-                                compression = st.session_state.compression
-                                MIN_FONT_SIZE = 30
-                                MAX_FONT_SIZE = 300
-                                POWER = 1.2
-                                attempts = 1
-                                while True:
-                                    img, placed_count, total_words = generate_word_cloud(
-                                        word_counts,
-                                        width=int(2400 * compression * scale),
-                                        height=int(1600 * (1 + (compression-1)/3) * scale),
-                                        font_path=FONT_PATH,
-                                        min_font_size=MIN_FONT_SIZE*scale,
-                                        max_font_size=MAX_FONT_SIZE*scale,
-                                        power=POWER,
-                                        margin=3*scale
-                                    )
-                                    
-                                    if placed_count == total_words:
-                                        break
-                                    
-                                    MIN_FONT_SIZE *= 0.9
-                                    MAX_FONT_SIZE *= 0.7
-                                    attempts += 1
-                                
-                                # Crop to content
-                                img_cropped = crop_to_content(img, margin=5)
-                                
-                                # Store in session state
-                                st.session_state.word_cloud = img_cropped
-                                st.session_state.placed_count = placed_count
-                                st.session_state.total_words = total_words
-                                
-                                st.success(f"Placed {placed_count} out of {total_words} words")
-                                st.rerun()
-                                
-                        except Exception as e:
-                            st.error(f"❌ Error generating word cloud: {str(e)}")
-        
-        with col3:
             st.download_button(
                 label="Download Cloud",
                 data=buf,
@@ -760,8 +696,7 @@ with st.expander("How to use"):
     1. **Upload a text file** (.txt format) using the file uploader above
     2. **Select the number of words** you want in your cloud (30-100)
     3. **Click the generate button** to create your word cloud
-    4. **Adjust parameters** (hidden words, stretch/compress)
-    5. **When you're happy** generate an HD cloud
+    4. **Adjust parameters** as necessary
     6. **Download** your word cloud using the download button
     
     **Note:** The word cloud uses intelligent text processing including:
