@@ -602,7 +602,7 @@ if not os.path.exists(FONT_PATH):
     st.stop()
 
 # Generation and download buttons
-col1, col2 = st.columns([6, 4])
+col1, col2 = st.columns([61, 39])
 
 # Generate button
 if uploaded_file is not None:
@@ -626,7 +626,7 @@ if uploaded_file is not None:
                         st.error("❌ No valid words found in the file. Please check your text file.")
                     else:
                         # Generate cloud
-                        compression = st.session_state.compression
+                        COMPRESSION = st.session_state.compression
                         MIN_FONT_SIZE = 30
                         MAX_FONT_SIZE = 300
                         POWER = 1.2
@@ -640,6 +640,7 @@ if uploaded_file is not None:
                                 min_font_size=MIN_FONT_SIZE,
                                 max_font_size=MAX_FONT_SIZE,
                                 power=POWER,
+                                compression=COMPRESSION,
                                 margin=6
                             )
                             
