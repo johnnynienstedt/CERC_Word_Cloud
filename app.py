@@ -626,6 +626,7 @@ if uploaded_file is not None:
                         st.error("❌ No valid words found in the file. Please check your text file.")
                     else:
                         # Generate cloud
+                        scale = 2
                         compression = st.session_state.compression
                         MIN_FONT_SIZE = 15 / compression
                         MAX_FONT_SIZE = 150 / compression
@@ -634,13 +635,13 @@ if uploaded_file is not None:
                         while True:
                             img, placed_count, total_words = generate_word_cloud(
                                 word_counts,
-                                width=int(1200*compression),
-                                height=800,
+                                width=int(1200*compression * scale),
+                                height=int(800 * scale),
                                 font_path=FONT_PATH,
-                                min_font_size=MIN_FONT_SIZE,
-                                max_font_size=MAX_FONT_SIZE,
+                                min_font_size=MIN_FONT_SIZE*scale,
+                                max_font_size=MAX_FONT_SIZE*scale,
                                 power=POWER,
-                                margin=3
+                                margin=3*scale
                             )
                             
                             if placed_count == total_words:
