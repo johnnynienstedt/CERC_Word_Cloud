@@ -761,8 +761,9 @@ with st.expander("How to use"):
     1. **Upload a text file** (.txt format) using the file uploader above
     2. **Select the number of words** you want in your cloud (30-100)
     3. **Click the generate button** to create your word cloud
-    4. **Re-shuffle** by clicking the button again without changing parameters
-    5. **Download** your word cloud using the download button
+    4. **Adjust parameters** (hidden words, stretch/compress)
+    5. **When you're happy** generate an HD cloud
+    6. **Download** your word cloud using the download button
     
     **Note:** The word cloud uses intelligent text processing including:
     - Bigram detection for common phrases
