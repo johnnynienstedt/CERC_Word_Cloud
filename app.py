@@ -553,8 +553,8 @@ col1, col2, col3 = st.columns([1, 2, 2])
 with col1:
     cloud_size = st.selectbox(
         "Words in cloud",
-        options=[30, 40, 50, 60, 70, 80, 90, 100],
-        index=1  # Default to 40
+        options=[20, 30, 40, 50, 60, 70, 80, 90, 100],
+        index=2  # Default to 40
     )
 
 with col2:
