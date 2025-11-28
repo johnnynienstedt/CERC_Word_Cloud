@@ -545,7 +545,7 @@ st.markdown("""
     """, unsafe_allow_html=True)
 
 # File uploader
-uploaded_file = st.file_uploader("Drag and drop .txt file here", type=['txt'], label_visibility="visible")
+uploaded_file = st.file_uploader("Drag and drop .txt file here", type=['txt'], label_visibility="hidden")
 
 # Cloud size selector and word exclusion input side by side
 col1, col2, col3 = st.columns([1, 2, 2])
