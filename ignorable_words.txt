@@ -51,10 +51,12 @@ done
 down
 each
 else
+elsewhere
 especially
 even
 eventually
 every
+everything
 feel
 felt
 find
