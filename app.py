@@ -5,6 +5,7 @@ import nltk
 import base64
 import random
 import itertools
+import requests
 import contractions
 import numpy as np
 import streamlit as st
@@ -38,11 +39,48 @@ download_nltk_data()
 # Font path - assumes font file is in same directory as script
 FONT_PATH = 'Gnuolane Rg.otf'
 
-def get_words(file_content, cloud_size, hidden_words=None):
+# Persistent, user-editable stopword list (shared across sessions/users)
+STOPWORDS_PATH = 'ignorable_words.txt'
+GITHUB_REPO = 'johnnynienstedt/CERC_Word_Cloud'
+
+def _github_token():
+    """Token from Streamlit secrets or env; None = local-file persistence only."""
+    try:
+        return st.secrets['github_token']
+    except Exception:
+        return os.environ.get('GITHUB_TOKEN')
+
+def load_ignorable_words():
+    with open(STOPWORDS_PATH, encoding='utf-8') as f:
+        return sorted({w.strip().lower() for w in re.split(r'[,\n]', f.read()) if w.strip()})
+
+def save_ignorable_words(text):
+    """Save the list; commits to GitHub when a token is configured so edits
+    survive app reboots/redeploys. Returns True if committed to GitHub."""
+    words = sorted({w.strip().lower() for w in re.split(r'[,\n]', text) if w.strip()})
+    content = '\n'.join(words) + '\n'
+
+    token = _github_token()
+    if token:
+        api = f'https://api.github.com/repos/{GITHUB_REPO}/contents/{STOPWORDS_PATH}'
+        headers = {'Authorization': f'Bearer {token}', 'Accept': 'application/vnd.github+json'}
+        r = requests.get(api, headers=headers)
+        payload = {'message': 'Update ignorable words (edited in app)',
+                   'content': base64.b64encode(content.encode()).decode()}
+        if r.ok:
+            payload['sha'] = r.json()['sha']
+        requests.put(api, headers=headers, json=payload).raise_for_status()
+
+    with open(STOPWORDS_PATH, 'w', encoding='utf-8', newline='\n') as f:
+        f.write(content)
+    return bool(token)
+
+def get_words(file_content, cloud_size, stopwords, forced_bigrams=None):
     """Extract and process words from file content"""
-    
-    if hidden_words is None:
-        hidden_words = set()
+
+    common_words = {w.lower() for w in stopwords}
+    forced_bigrams = {tuple(p.lower().split()) for p in (forced_bigrams or [])}
+    forced_words = {w for pair in forced_bigrams for w in pair}
 
     APOSTROPHES = [
         '\u2019',  # ’
@@ -96,38 +134,9 @@ def get_words(file_content, cloud_size, hidden_words=None):
         if item in all_words:
             all_words.remove(item)
 
-    # list of common words
-    common_words = ('the', 'a', 'at', 'there',	'some',	'my', 'of', 'be', 'use',	
-                    'her', 'than', 'and', 'this', 'an', 'would', 'first', 'have',
-                    'each', 'make', 'to', 'from', 'which', 'like', 'been', 'in',
-                    'or', 'she', 'him', 'is', 'one', 'do', 'into'	, 'who', 'you',
-                    'had',	'how', 'time', 'that', 'by', 'their', 'has'	, 'its',
-                    'it', 'word', 'if', 'look', 'now', 'he', 'but', 'will', 'two',
-                    'find', 'was', 'not', 'up', 'more', 'long', 'for', 'what', 
-                    'other', 'down', 'on', 'all', 'about', 'go', 'day', 'are',
-                    'were', 'out', 'see', 'did', 'with', 'when', 'then', 'no', 
-                    'come', 'his', 'your', 'them', 'way', 'made', 'they', 'can',
-                    'these', 'could', 'may', 'i', 'said', 'so', 'part', 'across',
-                    'again', 'began', 'begin', 'going', 'should', 'while', 'those',
-                    'still', 'bring', 'after', 'before', 'around', 'able', 'above',
-                    'although', 'already', 'away', 'behind', 'below', 'came',
-                    'else', 'instead', 'however', 'just', 'iteslf', 'himself',
-                    'herself', 'know', 'many', 'over', 'perhaps', 'only', 'much',
-                    'sure', 'several', 'take', 'took', 'toward', 'especially',
-                    'eventually', 'never', 'need', 'myself', 'most', 'very',
-                    'also', 'actually', 'against', 'almost', 'last', 'back', 'goes',
-                    'always', 'felt', 'feel', 'since', 'probably', 'knew', 'even',
-                    'think', 'until', 'wait', 'maybe', 'want', 'cannot', 'does',
-                    'another', 'being', 'once', 'through', 'though', 'tell', 'city',
-                    'done', 'must', 'here', 'every', 'thing', 'such', 'things', 
-                    'really', 'because', 'where', 'without', 'themselves')
-    
-    # eliminate common words
-    filtered_words = []
-    for word in all_words:
-        if word.lower() not in common_words:
-            filtered_words.append(word)
-    all_words = filtered_words
+    # eliminate ignorable words (but keep words needed for user-defined phrases)
+    all_words = [word for word in all_words
+                 if word.lower() not in common_words or word.lower() in forced_words]
 
     # STEP 1: Detect bigrams
     bigram_counts = Counter()
@@ -139,25 +148,28 @@ def get_words(file_content, cloud_size, hidden_words=None):
     word_counts = Counter(all_words)
     
     # Find bigrams that appear more often than the sum of individuals
-    detected_bigrams = []
-    words_in_bigrams = set()  # Track which words are part of bigrams
-    
+    detected_bigrams = set(forced_bigrams)  # user-defined phrases always combine
+    words_in_bigrams = set(forced_words)  # Track which words are part of bigrams
+
     for (w1, w2), bigram_freq in bigram_counts.items():
         individual_freq = word_counts[w1] + word_counts[w2]
-        
+
         # If bigram appears more than sum of individuals, it's a strong collocation
         if bigram_freq > individual_freq - 2*bigram_freq and bigram_freq > 5:
-            detected_bigrams.append((w1, w2))
-            words_in_bigrams.add(w1)
-            words_in_bigrams.add(w2)
+            detected_bigrams.add((w1.lower(), w2.lower()))
+            words_in_bigrams.add(w1.lower())
+            words_in_bigrams.add(w2.lower())
     
     # Replace sequences in all_words with bigram tokens
     processed_words = []
     i = 0
     while i < len(all_words):
         if i < len(all_words) - 1:
-            potential_bigram = (all_words[i], all_words[i+1])
-            if potential_bigram in detected_bigrams:
+            potential_bigram = (all_words[i].lower(), all_words[i+1].lower())
+            next_bigram = (all_words[i+1].lower(), all_words[i+2].lower()) if i < len(all_words) - 2 else None
+            # user-defined phrases win over auto bigrams that would consume their first word
+            if potential_bigram in detected_bigrams and (
+                    potential_bigram in forced_bigrams or next_bigram not in forced_bigrams):
                 processed_words.append(f"{all_words[i]} {all_words[i+1]}")
                 i += 2
                 continue
@@ -165,7 +177,7 @@ def get_words(file_content, cloud_size, hidden_words=None):
         i += 1
     
     # Now remove standalone instances of words that are part of bigrams
-    all_words = [word for word in processed_words if ' ' in word or word not in words_in_bigrams]
+    all_words = [word for word in processed_words if ' ' in word or word.lower() not in words_in_bigrams]
     all_words = [word for word in all_words if len(word) >= 4]
     
     # STEP 2: Identify proper nouns (words that appear capitalized more than 70% of the time)
@@ -248,8 +260,10 @@ def get_words(file_content, cloud_size, hidden_words=None):
     
     # Group words by their stem
     for word, freq in words.items():
-        if ' ' in word or word.lower() in proper_nouns:
-            stem = word  # Don't stem bigrams or proper nouns
+        if ' ' in word:
+            stem = word.lower()  # Don't stem bigrams, but merge case variants
+        elif word.lower() in proper_nouns:
+            stem = word  # Don't stem proper nouns
         else:
             stem = stemmer.stem(word)
         if stem not in stem_groups:
@@ -266,18 +280,26 @@ def get_words(file_content, cloud_size, hidden_words=None):
     # Sort by frequency
     result = dict(sorted(result.items(), key = lambda x:x[1], reverse = True))
     
-    # Filter out hidden words (case-insensitive) and then truncate to correct size
-    # This ensures we always get cloud_size words (if available) after filtering
-    if hidden_words:
-        result = {word: freq for word, freq in result.items() 
-                  if word.lower() not in hidden_words}
+    # Filter out ignorable words/phrases again (case-insensitive) so grouped
+    # forms and bigram tokens can't reintroduce them, then truncate
+    result = {word: freq for word, freq in result.items()
+              if word.lower() not in common_words}
     
     # Truncate to cloud_size AFTER filtering
     result = dict(itertools.islice(result.items(), cloud_size))
     
     return result
-    
-def generate_word_cloud(word_counts, width=1200, height=800, font_path=None, 
+
+@st.cache_data
+def suggest_bigrams(file_content, stopwords, top_n=10):
+    """Frequent adjacent word pairs to offer as candidate phrases."""
+    stop = set(stopwords)
+    words = [w for w in re.findall(r"[A-Za-z][A-Za-z']{3,}", file_content)
+             if w.lower() not in stop]
+    pairs = Counter((words[i].lower(), words[i + 1].lower()) for i in range(len(words) - 1))
+    return [f"{a} {b}" for (a, b), n in pairs.most_common() if n >= 3][:top_n]
+
+def generate_word_cloud(word_counts, width=1200, height=800, font_path=None,
                         min_font_size=15, max_font_size=150, power=1.2, compression=1, margin=4):
     """
     Generate a word cloud with frequency-based sizing and pixel-perfect placement.
@@ -537,8 +559,8 @@ st.markdown("""
         padding: 3rem 2rem !important;
         min-height: 150px;
     }
-    /* Make dropdown narrower */
-    div[data-baseweb="select"] {
+    /* Make dropdown narrower (selectbox only, not multiselect) */
+    [data-testid="stSelectbox"] div[data-baseweb="select"] {
         max-width: 150px;
     }
     </style>
@@ -547,8 +569,23 @@ st.markdown("""
 # File uploader
 uploaded_file = st.file_uploader("Drag and drop .txt file here", type=['txt'], label_visibility="hidden")
 
-# Cloud size selector and word exclusion input side by side
-col1, col2, col3 = st.columns([1, 2, 2])
+# Decode uploaded file once (also used for phrase suggestions)
+file_content = None
+if uploaded_file is not None:
+    file_bytes = uploaded_file.getvalue()
+    detected_encoding = detect_encoding(file_bytes)
+
+    if detected_encoding:
+        st.caption(f"Detected encoding: {detected_encoding}")
+        file_content = file_bytes.decode(detected_encoding, errors="replace")
+    else:
+        st.warning("Could not detect encoding; falling back to cp1252.")
+        file_content = file_bytes.decode('cp1252')
+
+ignorable_words = load_ignorable_words()
+
+# Cloud size selector and compression slider side by side
+col1, col2 = st.columns([1, 2])
 
 with col1:
     cloud_size = st.selectbox(
@@ -558,34 +595,6 @@ with col1:
     )
 
 with col2:
-    # Initialize hidden words in session state
-    if 'hidden_words' not in st.session_state:
-        st.session_state.hidden_words = set()
-    
-    col2a, col2b = st.columns([3, 1])
-    with col2a:
-        word_to_hide = st.text_input(
-            "Exclude words or phrases?",
-            key="word_to_hide",
-            placeholder="Enter word to hide..."
-        )
-    with col2b:
-        st.markdown("<div style='margin-top: 1.85rem;'></div>", unsafe_allow_html=True)
-        if st.button("Hide", use_container_width=True):
-            if word_to_hide and word_to_hide.strip():
-                st.session_state.hidden_words.add(word_to_hide.strip().lower())
-                st.session_state.hide_word_input = ""
-                st.rerun()
-    
-    # Display hidden words if any exist
-    if st.session_state.hidden_words:
-        hidden_list = ", ".join(sorted(st.session_state.hidden_words))
-        st.caption(f"Hidden: {hidden_list}")
-        if st.button("Clear all hidden words", key="clear_hidden"):
-            st.session_state.hidden_words = set()
-            st.rerun()
-            
-with col3:
     # Initialize compression value on first load
     if "compression" not in st.session_state:
         st.session_state.compression = 1.0
@@ -599,6 +608,51 @@ with col3:
             value=st.session_state.compression,
             step=0.05
         )
+
+# Editable, persistent stopword list
+with st.expander("Edit Ignorable Words"):
+    st.caption("These words never appear in a cloud. Edits apply to all users and future sessions. "
+               "Comma- or line-separated; multi-word phrases are allowed.")
+    edited_words = st.text_area("Ignorable words", value=", ".join(ignorable_words),
+                                height=220, label_visibility="collapsed")
+    if st.button("Save ignorable words"):
+        st.session_state.saved_to_github = save_ignorable_words(edited_words)
+        st.rerun()
+    if 'saved_to_github' in st.session_state:
+        if st.session_state.pop('saved_to_github'):
+            st.success("Saved — committed to GitHub.")
+        else:
+            st.warning("Saved, but no GitHub token is configured — edits reset when the app reboots.")
+
+# User-defined phrases (forced bigrams)
+def add_custom_bigram():
+    phrase = ' '.join(st.session_state.new_bigram.lower().split())
+    if len(phrase.split()) != 2:
+        st.session_state.bigram_error = True
+        return
+    st.session_state.custom_bigrams.add(phrase)
+    if phrase not in st.session_state.forced_bigrams:
+        st.session_state.forced_bigrams = st.session_state.forced_bigrams + [phrase]
+    st.session_state.new_bigram = ""
+
+if file_content is not None:
+    with st.expander("Combine Words into Phrases"):
+        st.session_state.setdefault('custom_bigrams', set())
+        st.session_state.setdefault('forced_bigrams', [])
+        suggestions = suggest_bigrams(file_content, tuple(ignorable_words))
+        options = sorted(set(suggestions) | st.session_state.custom_bigrams
+                         | set(st.session_state.forced_bigrams))
+        st.multiselect(
+            "Selected pairs always appear as one phrase (suggestions = frequent pairs in your file)",
+            options=options,
+            key='forced_bigrams'
+        )
+        colA, colB = st.columns([3, 1])
+        colA.text_input("Add your own pair", key='new_bigram',
+                        placeholder="e.g. climate change", label_visibility="collapsed")
+        colB.button("Add phrase", use_container_width=True, on_click=add_custom_bigram)
+        if st.session_state.pop('bigram_error', False):
+            st.warning("Enter exactly two words.")
 
 # Check if font exists
 if not os.path.exists(FONT_PATH):
@@ -614,25 +668,15 @@ if uploaded_file is not None:
         generate_clicked = st.button("Generate Cloud", type="primary", use_container_width=True)
     
     if generate_clicked:
-        # Read file
-        file_bytes = uploaded_file.read()
-        detected_encoding = detect_encoding(file_bytes)
-        
-        if detected_encoding:
-            st.caption(f"Detected encoding: {detected_encoding}")
-            file_content = file_bytes.decode(detected_encoding, errors="replace")
-        else:
-            st.warning("Could not detect encoding; falling back to cp1252.")
-            file_content = file_bytes.decode('cp1252')
-
         # Check if file has enough content
         if len(file_content.strip()) < 100:
             st.warning("⚠️ The uploaded file appears to be too short. Please upload a longer text file.")
         else:
             with st.spinner('Generating word cloud...'):
                 try:
-                    # Process words with hidden words filter
-                    word_counts = get_words(file_content, cloud_size, st.session_state.hidden_words)
+                    # Process words with ignorable-word filter and user-defined phrases
+                    word_counts = get_words(file_content, cloud_size, ignorable_words,
+                                            st.session_state.get('forced_bigrams', []))
                     
                     if len(word_counts) == 0:
                         st.error("❌ No valid words found in the file. Please check your text file.")
@@ -642,8 +686,7 @@ if uploaded_file is not None:
                         MIN_FONT_SIZE = 30
                         MAX_FONT_SIZE = 300
                         POWER = 1.2
-                        attempts = 1
-                        while True:
+                        for attempts in range(1, 5):
                             img, placed_count, total_words = generate_word_cloud(
                                 word_counts,
                                 width=int(2400 * attempts),
@@ -655,15 +698,13 @@ if uploaded_file is not None:
                                 compression=COMPRESSION,
                                 margin=6
                             )
-                            
+
                             if placed_count == total_words:
                                 break
-                            
-                            attempts += 1
 
-                            if attempts == 5:
-                                st.error("❌ Generation attempt timed out. Try again.")
-                        
+                        if placed_count != total_words:
+                            st.error("❌ Couldn't place every word after 4 attempts. Try again or reduce the cloud size.")
+
                         # Crop to content
                         img_cropped = crop_to_content(img, margin=5)
                         
@@ -708,8 +749,8 @@ with st.expander("How to use"):
     6. **Download** your word cloud using the download button
     
     **Note:** The word cloud uses intelligent text processing including:
-    - Bigram detection for common phrases
+    - Bigram detection for common phrases (plus your own via "Combine Words into Phrases")
     - Proper noun and acronym identification and capitalization
     - Lemmatization and stemming for word grouping
-    - Common word filtering
+    - Ignorable-word filtering (editable via "Edit Ignorable Words")
     """)
