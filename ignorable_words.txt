@@ -51,6 +51,7 @@ do
 does
 done
 down
+e-mail
 each
 else
 elsewhere
