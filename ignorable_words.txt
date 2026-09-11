@@ -75,6 +75,7 @@ getting
 go
 goes
 going
+guess
 had
 has
 have
