@@ -59,6 +59,7 @@ e-mail
 each
 else
 elsewhere
+enough
 especially
 even
 eventually
