@@ -18,6 +18,7 @@ and
 another
 answer
 anyone
+anything
 are
 around
 at
@@ -69,6 +70,7 @@ find
 first
 for
 from
+getting
 go
 goes
 going
@@ -98,6 +100,7 @@ itself
 just
 knew
 know
+kosmicki
 last
 like
 long
