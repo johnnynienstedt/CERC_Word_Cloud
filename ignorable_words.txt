@@ -87,6 +87,7 @@ goes
 going
 guess
 had
+half
 has
 have
 he
@@ -122,6 +123,7 @@ make
 many
 may
 maybe
+measure
 more
 most
 much
@@ -213,6 +215,7 @@ will
 with
 without
 word
+work
 would
 you
 your
