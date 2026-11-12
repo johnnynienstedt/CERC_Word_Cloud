@@ -76,7 +76,6 @@ eventually
 every
 everyone
 everything
-family
 feel
 felt
 find
@@ -154,9 +153,7 @@ out
 over
 part
 particularly
-patients
 perhaps
-physicians
 probably
 provide
 provided
